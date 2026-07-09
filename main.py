@@ -1,17 +1,18 @@
 import asyncio
 import random
+import sys
 import mouse
 import threading
 import secrets
+import subprocess
+
 from pathlib import Path
 from pynput.keyboard import Key, Controller
-
 from twitchAPI.twitch import Twitch
 from twitchAPI.oauth import UserAuthenticator
 from twitchAPI.type import AuthScope, ChatEvent
 from twitchAPI.eventsub.websocket import EventSubWebsocket
 from twitchAPI.chat import Chat, ChatMessage, EventData
-
 from playsound import playsound
 
 meow_folder = Path("MeowSounds")
@@ -32,8 +33,16 @@ keyboard = None
 async def on_ready(ready_event: EventData):
     # Join the target channel's chat
     await ready_event.chat.join_room(TARGET_CHANNEL)
-    # await chat.send_message(TARGET_CHANNEL, "bot is online 👀")
+    # await chat.send_message(TARGET_CHANNEL, "bot is online ")
     print("pandobot ready!")
+
+async def play_sound(sound_file):
+    # Play the sound in a separate thread to avoid blocking the event loop
+    threading.Thread(target=playsound, args=(sound_file,), daemon=True).start()
+
+async def jumpscare(image_path="jumpscare.png", duration=1000):
+    await play_sound("jumpscare.mp3")
+    subprocess.Popen([sys.executable, "jumpscare.py", image_path, str(duration)])
 
 async def on_redeem(data):
     print("REWARD REDEEMED!")
@@ -61,13 +70,12 @@ async def on_redeem(data):
             print("Meowing!")
             # Play random sound from meow folder
             await play_sound(str(random.choice(list(meow_folder.glob("*.mp3")))))
+        case "Jumpscare":
+            print("Jumpscare!")
+            await jumpscare(image_path="jumpscare.png", duration=1000)
 
 async def on_message(message: ChatMessage): 
     print(f"{message.user.name}: {message.text}")
-
-async def play_sound(sound_file):
-    # Play the sound in a separate thread to avoid blocking the event loop
-    threading.Thread(target=playsound, args=(sound_file,), daemon=True).start()
 
 async def run_bot():
     print("Starting pandobot...")
